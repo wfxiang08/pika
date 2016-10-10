@@ -14,11 +14,13 @@ public:
     cli_->set_connect_timeout(1500);
   };
 
+#if 0
   PikaSlaveOfRedisThread(int64_t sid) : sid_(sid),
   is_first_send_(true) {
     cli_ = new pink::RedisCli();
     cli_->set_connect_timeout(1500);
   };
+#endif
 
   virtual ~PikaSlaveOfRedisThread() {
     should_exit_ = true;
@@ -31,13 +33,16 @@ public:
   pink::Status RecvProc();
 
 private:
-  int64_t sid_;
+  //int64_t sid_;
   bool is_first_send_;
 
   int sockfd_;
   pink::RedisCli *cli_;
 
   virtual void* ThreadMain();
+  
+	pink::Status SendPing();
+	pink::Status RecvPingProc();
 
 };
 

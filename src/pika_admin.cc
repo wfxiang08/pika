@@ -61,27 +61,45 @@ void SlaveofCmd::DoInitial(PikaCmdArgsType &argv, const CmdInfo* const ptr_info)
 }
 
 void SlaveofCmd::Do() {
-  if (is_noone_) {
-    // Stop rsync
-    LOG(INFO) << "start slaveof, stop rsync first";
-    slash::StopRsync(g_pika_conf->db_sync_path());
-    
-    g_pika_server->RemoveMaster();
-    res_.SetRes(CmdRes::kOk);
-    return;
-  }
-  if (have_offset_) {
-    // Before we send the trysync command, we need purge current logs older than the sync point
-    if (filenum_ > 0) {
-      g_pika_server->PurgeLogs(filenum_ - 1, true, true);
+
+  // judge master server, pika or redis ?
+	bool is_pika;
+  is_pika = false;
+
+  // master server is pika
+  if (is_pika) {
+    if (is_noone_) {
+      // Stop rsync
+      LOG(INFO) << "start slaveof, stop rsync first";
+      slash::StopRsync(g_pika_conf->db_sync_path());
+      
+      g_pika_server->RemoveMaster();
+      res_.SetRes(CmdRes::kOk);
+      return;
     }
-    g_pika_server->logger_->SetProducerStatus(filenum_, pro_offset_);
-  }
-  bool sm_ret = g_pika_server->SetMaster(master_ip_, master_port_);
-  if (sm_ret) {
-    res_.SetRes(CmdRes::kOk);
+    if (have_offset_) {
+      // Before we send the trysync command, we need purge current logs older than the sync point
+      if (filenum_ > 0) {
+        g_pika_server->PurgeLogs(filenum_ - 1, true, true);
+      }
+      g_pika_server->logger_->SetProducerStatus(filenum_, pro_offset_);
+    }
+    bool sm_ret = g_pika_server->SetMaster(master_ip_, master_port_);
+    if (sm_ret) {
+      res_.SetRes(CmdRes::kOk);
+    } else {
+      res_.SetRes(CmdRes::kErrOther, "Server is not in correct state for slaveof");
+    }
+
+  // master server is redis
   } else {
-    res_.SetRes(CmdRes::kErrOther, "Server is not in correct state for slaveof");
+    bool sm_ret = g_pika_server->SetMaster(master_ip_, master_port_);
+    if (sm_ret) {
+		  g_pika_server->pika_slaveof_redis_thread()->StartThread();
+      res_.SetRes(CmdRes::kOk);
+    } else {
+      res_.SetRes(CmdRes::kErrOther, "Server is not in correct state for slaveof");
+    }
   }
 }
 

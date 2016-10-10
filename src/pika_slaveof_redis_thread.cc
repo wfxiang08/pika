@@ -5,9 +5,30 @@
 
 extern PikaServer* g_pika_server;
 
+pink::Status PikaSlaveOfRedisThread::SendPing() {
+  std::string wbuf_str;
+  pink::RedisCli::SerializeCommand(&wbuf_str, "ping");
+  return cli_->Send(&wbuf_str);
+}
+
 pink::Status PikaSlaveOfRedisThread::Send() {
 
   return pink::Status::OK();
+}
+
+pink::Status PikaSlaveOfRedisThread::RecvPingProc() {
+  pink::Status s = cli_->Recv(NULL);
+  if (s.ok()) {
+    slash::StringToLower(cli_->argv_[0]);
+    LOG(INFO) << "Get reply from redis after ping: " << cli_->argv_[0];
+    if (cli_->argv_[0] == "pong" || cli_->argv_[0] == "ok") {
+    } else {
+      s = pink::Status::Corruption("Reply is not pong or ok");
+    }
+  } else {
+    LOG(WARNING) << "RecvPingProc, recv error: " << s.ToString();
+  }
+  return s;
 }
 
 pink::Status PikaSlaveOfRedisThread::RecvProc() {
@@ -16,6 +37,9 @@ pink::Status PikaSlaveOfRedisThread::RecvProc() {
 }
 
 void* PikaSlaveOfRedisThread::ThreadMain() {
+
+  LOG(INFO) << "Send ping ...";
+  SendPing();
 
   while (true) {
     LOG(INFO) << "PikaSlaveOfRedisThread::ThreadMain ...";

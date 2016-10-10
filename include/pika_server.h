@@ -61,6 +61,9 @@ public:
   PikaTrysyncThread* pika_trysync_thread() {
     return pika_trysync_thread_;
   }
+  PikaSlaveOfRedisThread* pika_slaveof_redis_thread() {
+    return  pika_slaveof_redis_thread_;
+  }
   std::string& master_ip() {
     return master_ip_;
   }
