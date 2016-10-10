@@ -18,6 +18,7 @@
 #include "pika_monitor_thread.h"
 #include "pika_define.h"
 #include "pika_binlog_bgworker.h"
+#include "pika_slaveof_redis_thread.h"
 
 #include "slash_status.h"
 #include "slash_mutex.h"
@@ -288,6 +289,7 @@ private:
   PikaBinlogReceiverThread* pika_binlog_receiver_thread_;
   PikaHeartbeatThread* pika_heartbeat_thread_;
   PikaTrysyncThread* pika_trysync_thread_;
+  PikaSlaveOfRedisThread* pika_slaveof_redis_thread_;
 
   /*
    * Master use 

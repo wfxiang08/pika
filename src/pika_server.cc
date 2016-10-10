@@ -78,6 +78,7 @@ PikaServer::PikaServer() :
   pika_heartbeat_thread_ = new PikaHeartbeatThread(ips, port_ + 2000, 1000);
   pika_trysync_thread_ = new PikaTrysyncThread();
   monitor_thread_ = new PikaMonitorThread();
+  pika_slaveof_redis_thread_ = new PikaSlaveOfRedisThread();
   
   //for (int j = 0; j < g_pika_conf->binlogbg_thread_num; j++) {
   for (int j = 0; j < g_pika_conf->sync_thread_num(); j++) {
@@ -232,6 +233,7 @@ void PikaServer::Start() {
   pika_binlog_receiver_thread_->StartThread();
   pika_heartbeat_thread_->StartThread();
   pika_trysync_thread_->StartThread();
+  pika_slaveof_redis_thread_->StartThread();
 
   time(&start_time_s_);
 
