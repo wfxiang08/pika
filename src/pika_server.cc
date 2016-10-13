@@ -232,7 +232,7 @@ void PikaServer::Start() {
   pika_dispatch_thread_->StartThread();
   pika_binlog_receiver_thread_->StartThread();
   pika_heartbeat_thread_->StartThread();
-  pika_trysync_thread_->StartThread();
+  //pika_trysync_thread_->StartThread();
   //pika_slaveof_redis_thread_->StartThread();
 
   time(&start_time_s_);

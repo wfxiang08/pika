@@ -2,21 +2,55 @@
 #include <poll.h>
 #include "pika_slaveof_redis_thread.h"
 #include "pika_server.h"
+#include "pika_conf.h"
 
 extern PikaServer* g_pika_server;
+extern PikaConf *g_pika_conf;
 
-pink::Status PikaSlaveOfRedisThread::SendPing() {
+pink::Status PikaSlaveOfRedisThread::Send() {
+  return pink::Status::OK();
+}
+
+pink::Status PikaSlaveOfRedisThread::RecvProc() {
+  return pink::Status::OK();
+}
+
+pink::Status PikaSlaveOfRedisThread::RepconfListeningPort() {
+	std::string wbuf_str;
+  std::vector<std::string> args;
+	args.push_back(std::string("replconf"));
+	args.push_back(std::string("listening-port"));
+	
+	char tmpbuf[32];
+	memset(tmpbuf, 0, sizeof(tmpbuf));
+	sscanf(tmpbuf, "%d", g_pika_conf->port());
+	args.push_back(std::string(tmpbuf));
+	pink::RedisCli::SerializeCommand(args, &wbuf_str);
+  return cli_->Send(&wbuf_str);
+}
+
+pink::Status PikaSlaveOfRedisThread::RepconfListeningPortProc() {
+  pink::Status s = cli_->Recv(NULL);
+  if (s.ok()) {
+    slash::StringToLower(cli_->argv_[0]);
+    LOG(INFO) << "Get reply from redis after replconf listening-port: " << cli_->argv_[0];
+    if (cli_->argv_[0] == "ok") {
+    } else {
+      s = pink::Status::Corruption("Reply is not ok");
+    }
+  } else {
+    LOG(WARNING) << "PingProc, recv error: " << s.ToString();
+  }
+  return s;
+}
+
+pink::Status PikaSlaveOfRedisThread::Ping() {
   std::string wbuf_str;
   pink::RedisCli::SerializeCommand(&wbuf_str, "ping");
   return cli_->Send(&wbuf_str);
 }
 
-pink::Status PikaSlaveOfRedisThread::Send() {
-
-  return pink::Status::OK();
-}
-
-pink::Status PikaSlaveOfRedisThread::RecvPingProc() {
+pink::Status PikaSlaveOfRedisThread::PingProc() {
   pink::Status s = cli_->Recv(NULL);
   if (s.ok()) {
     slash::StringToLower(cli_->argv_[0]);
@@ -26,20 +60,88 @@ pink::Status PikaSlaveOfRedisThread::RecvPingProc() {
       s = pink::Status::Corruption("Reply is not pong or ok");
     }
   } else {
-    LOG(WARNING) << "RecvPingProc, recv error: " << s.ToString();
+    LOG(WARNING) << "PingProc, recv error: " << s.ToString();
   }
   return s;
 }
 
-pink::Status PikaSlaveOfRedisThread::RecvProc() {
+pink::Status PikaSlaveOfRedisThread::RepconfCapa() {
+	std::string wbuf_str;
+  std::vector<std::string> args;
+	args.push_back(std::string("replconf"));
+	args.push_back(std::string("capa"));
+	args.push_back(std::string("eof"));
+	
+	pink::RedisCli::SerializeCommand(args, &wbuf_str);
+  return cli_->Send(&wbuf_str);
+}
 
-  return pink::Status::OK();
+pink::Status PikaSlaveOfRedisThread::RepconfCapaProc() {
+  pink::Status s = cli_->Recv(NULL);
+  if (s.ok()) {
+    slash::StringToLower(cli_->argv_[0]);
+    LOG(INFO) << "Get reply from redis after replconf capa: " << cli_->argv_[0];
+    if (cli_->argv_[0] == "ok") {
+    } else {
+      s = pink::Status::Corruption("Reply is not ok");
+    }
+  } else {
+    LOG(WARNING) << "PingProc, recv error: " << s.ToString();
+  }
+	return s;
 }
 
 void* PikaSlaveOfRedisThread::ThreadMain() {
 
-  LOG(INFO) << "Send ping ...";
-  SendPing();
+  pink::Status s;
+  LOG(INFO) << "master_ip:" << g_pika_server->master_ip() << " master_port:" << g_pika_server->master_port();
+
+  do {
+    s = cli_->Connect(g_pika_server->master_ip(), g_pika_server->master_port(), g_pika_server->host());
+
+    if (s.ok() && !should_exit_) {
+  		LOG(INFO) << "Ping ...";
+  		s = Ping();
+    } else {
+			break;
+		}
+
+		if (s.ok() && !should_exit_) {
+		  LOG(INFO) << "PingProc ...";
+      s = PingProc();
+		} else {
+			break;
+		}
+
+    if (s.ok() && !should_exit_) {
+  		LOG(INFO) << "RepconfListeningPort ...";
+  		s = RepconfListeningPort();
+    } else {
+			break;
+		}
+
+		if (s.ok() && !should_exit_) {
+		  LOG(INFO) << "RepconfListeningPortProc ...";
+      s = RepconfListeningPortProc();
+		} else {
+			break;
+		}
+
+    if (s.ok() && !should_exit_) {
+  		LOG(INFO) << "RepconfCapa ...";
+  		s = RepconfCapa();
+    } else {
+			break;
+		}
+
+		if (s.ok() && !should_exit_) {
+		  LOG(INFO) << "RepconfCapaProc ...";
+      s = RepconfCapaProc();
+		} else {
+			break;
+		}
+
+	} while (0);
 
   while (true) {
     LOG(INFO) << "PikaSlaveOfRedisThread::ThreadMain ...";

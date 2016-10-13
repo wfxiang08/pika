@@ -41,8 +41,12 @@ private:
 
   virtual void* ThreadMain();
   
-	pink::Status SendPing();
-	pink::Status RecvPingProc();
+	pink::Status Ping();
+	pink::Status PingProc();
+	pink::Status RepconfListeningPort();
+	pink::Status RepconfListeningPortProc();
+	pink::Status RepconfCapa();
+	pink::Status RepconfCapaProc();
 
 };
 
