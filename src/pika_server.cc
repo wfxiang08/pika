@@ -496,6 +496,7 @@ bool PikaServer::SetMaster(std::string& master_ip, int master_port) {
     master_ip = host_;
   }
   slash::RWLock l(&state_protector_, true);
+
   if ((role_ ^ PIKA_ROLE_SLAVE) && repl_state_ == PIKA_REPL_NO_CONNECT) {
     master_ip_ = master_ip;
     master_port_ = master_port;

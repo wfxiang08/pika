@@ -56,6 +56,7 @@ void SlaveofCmd::DoInitial(PikaCmdArgsType &argv, const CmdInfo* const ptr_info)
   if (cur_size == 0) {
 
   } else if (cur_size == 1) {
+    // slaveof 127.0.0.1 12121 force
     std::string command = *it++;
     if (command != "force") {
       res_.SetRes(CmdRes::kSyntaxErr);
@@ -63,6 +64,7 @@ void SlaveofCmd::DoInitial(PikaCmdArgsType &argv, const CmdInfo* const ptr_info)
     }
     g_pika_server->SetForceFullSync(true);
   } else if (cur_size == 2) {
+    // slaveof 127.0.0.1 12121 filename offset
     have_offset_ = true;
     std::string str_filenum = *it++;
     if (!slash::string2l(str_filenum.data(), str_filenum.size(), &filenum_) || filenum_ < 0) {
@@ -111,20 +113,25 @@ void TrysyncCmd::DoInitial(PikaCmdArgsType &argv, const CmdInfo* const ptr_info)
     return;
   }
   PikaCmdArgsType::iterator it = argv.begin() + 1; //Remember the first args is the opt name
+
+  // IP
   slave_ip_ = *it++;
 
+  // 端口
   std::string str_slave_port = *it++;
   if (!slash::string2l(str_slave_port.data(), str_slave_port.size(), &slave_port_) || slave_port_ <= 0) {
     res_.SetRes(CmdRes::kInvalidInt);
     return;
   }
 
+  // binlog文件
   std::string str_filenum = *it++;
   if (!slash::string2l(str_filenum.data(), str_filenum.size(), &filenum_) || filenum_ < 0) {
     res_.SetRes(CmdRes::kInvalidInt);
     return;
   }
 
+  // offset
   std::string str_pro_offset = *it++;
   if (!slash::string2l(str_pro_offset.data(), str_pro_offset.size(), &pro_offset_) || pro_offset_ < 0) {
     res_.SetRes(CmdRes::kInvalidInt);
